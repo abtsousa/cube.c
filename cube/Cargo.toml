@@ -1,0 +1,10 @@
+[package]
+name = "cube"
+version = "0.9"
+authors = ["Servet Gulnaroglu, Afonso Bras Sousa"]
+edition = "2021"
+description = "A simple 3D cube. Original code in C by Servet Gulnaroglu. Ported to Rust by Afonso Bras Sousa"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]

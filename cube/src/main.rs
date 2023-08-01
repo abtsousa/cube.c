@@ -44,7 +44,7 @@ unsafe fn calculate_for_surface(cube_x: f32, cube_y: f32, cube_z: f32, ch: char)
     let yp = (SCREEN_H as f32 / 2. + K1 as f32 * ooz * y) as usize;
 
     let idx = xp + yp * SCREEN_W;
-    if idx >= 0 && idx < SCREEN_W * SCREEN_H && ooz > Z_BUFFER[idx] {
+    if idx < SCREEN_W * SCREEN_H && ooz > Z_BUFFER[idx] {
         Z_BUFFER[idx] = ooz;
         BUFFER[idx] = ch;
     }
