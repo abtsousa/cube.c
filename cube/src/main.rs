@@ -21,9 +21,9 @@ static yp: u8;
 static idx: u8;
 
 
-fn main() {} 
-
 fn calculate_x(i: i32, j: i32, k: i32) -> i32 {
     return j * A.sin() * B.sin() * C.cos() - k * A.cos() * B.sin() * C.cos() +
     j * A.cos() * C.sin() + k * A.sin() * C.sin() + i * B.cos() * C.cos();
 }
+
+fn main() {}
