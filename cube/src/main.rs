@@ -76,7 +76,6 @@ fn main() {
             cube_x = cube_x + INCREMENT_SPEED;
         }
 
-        print!("\x1b[H");  // Move cursor to the top-left of the scree
         for k in 0..SCREEN_WXH {
             if (k % SCREEN_W) != 0 {
                 unsafe {print!("{}",BUFFER[k]);}
