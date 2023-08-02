@@ -1,15 +1,17 @@
 use std::io::{stdout,Write};
-static mut Z_BUFFER: [f32; SCREEN_WXH] = [0.; SCREEN_WXH];
-static mut BUFFER: [char; SCREEN_WXH] = [0 as char; SCREEN_W*SCREEN_H];
 
-static mut A: f32 = 0.;
-static mut B: f32 = 0.;
-static mut C: f32 = 0.;
+//Implementing global mutables as a struct
+struct Status {
+    z_buf: [f32; SCREEN_WXH],
+    buf: [char; SCREEN_WXH],
+    a: f32,
+    b: f32,
+    c: f32,
+}
 
 const SCREEN_W: usize = 160;
 const SCREEN_H: usize = 44;
 const SCREEN_WXH: usize = (SCREEN_W * SCREEN_H) as usize;
-
 
 const CUBE_W: u8 = 20;
 const BG_ASCII: char = '.';
@@ -19,59 +21,65 @@ const K1: u8 = 40;
 
 static INCREMENT_SPEED: f32 = 0.6;
 
-unsafe fn calculate_x(i: f32, j: f32, k: f32) -> f32 {
-    return j * A.sin() * B.sin() * C.cos() - k * A.cos() * B.sin() * C.cos() +
-    j * A.cos() * C.sin() + k * A.sin() * C.sin() + i * B.cos() * C.cos();
+fn calculate_x(i: f32, j: f32, k: f32, status: &Status) -> f32 {
+    return j * status.a.sin() * status.b.sin() * status.c.cos() - k * status.a.cos() * status.b.sin() * status.c.cos() +
+    j * status.a.cos() * status.c.sin() + k * status.a.sin() * status.c.sin() + i * status.b.cos() * status.c.cos();
 }
 
-unsafe fn calculate_y(i: f32, j: f32, k: f32) -> f32 {
-    return j * A.cos() * C.cos() + k * A.sin() * C.cos() -
-    j * A.sin() * B.sin() * C.sin() + k * A.cos() * B.sin() * C.sin() -
-    i * B.cos() * C.sin();
+fn calculate_y(i: f32, j: f32, k: f32, status: &Status) -> f32 {
+    return j * status.a.cos() * status.c.cos() + k * status.a.sin() * status.c.cos() -
+    j * status.a.sin() * status.b.sin() * status.c.sin() + k * status.a.cos() * status.b.sin() * status.c.sin() -
+    i * status.b.cos() * status.c.sin();
 }
 
-unsafe fn calculate_z(i: f32, j: f32, k: f32) -> f32 {
-    return k * A.cos() * B.cos() - j * A.sin() * B.cos() + i * B.sin();
+fn calculate_z(i: f32, j: f32, k: f32, status: &Status) -> f32 {
+    return k * status.a.cos() * status.b.cos() - j * status.a.sin() * status.b.cos() + i * status.b.sin();
 }
 
-unsafe fn calculate_for_surface(cube_x: f32, cube_y: f32, cube_z: f32, ch: char) {
-    let x = calculate_x(cube_x,cube_y,cube_z);
-    let y = calculate_y(cube_x,cube_y,cube_z);
-    let z = calculate_z(cube_x,cube_y,cube_z) + CAM_DISTANCE as f32;
+fn calculate_for_surface(cube_x: f32, cube_y: f32, cube_z: f32, ch: char, status: &mut Status) {
+    let x = calculate_x(cube_x,cube_y,cube_z, status);
+    let y = calculate_y(cube_x,cube_y,cube_z, status);
+    let z = calculate_z(cube_x,cube_y,cube_z, status) + CAM_DISTANCE as f32;
 
     let ooz = 1. / z;
     let xp = (SCREEN_W as f32 / 2. + HORIZONTAL_OFFSET as f32 + K1 as f32 * ooz * x * 2.) as usize;
     let yp = (SCREEN_H as f32 / 2. + K1 as f32 * ooz * y) as usize;
 
     let idx = xp + yp * SCREEN_W;
-    if idx < SCREEN_W * SCREEN_H && ooz > Z_BUFFER[idx] {
-        Z_BUFFER[idx] = ooz;
-        BUFFER[idx] = ch;
+    if idx < SCREEN_W * SCREEN_H && ooz > status.z_buf[idx] {
+        status.z_buf[idx] = ooz;
+        status.buf[idx] = ch;
     }
 }
 
 fn main() {
     print!("\x1b[?25l"); //hide cursor
     print!("\x1b[2J"); //clear screen
+
+    let mut status = Status {
+        z_buf: [0.; SCREEN_WXH],
+        buf: [0 as char; SCREEN_WXH],
+        a: 0.,
+        b: 0.,
+        c: 0.,
+    };
+
     loop {
-        unsafe {
-            BUFFER.fill(BG_ASCII); //clear buffers
-            Z_BUFFER.fill(0.);
-        }
+        status.buf.fill(BG_ASCII); //clear buffers
+        status.z_buf.fill(0.);
 
         let mut cube_x = -1.*CUBE_W as f32;
 
         while cube_x < CUBE_W as f32 {
-        let mut cube_y = -1.*CUBE_W as f32;
-            while cube_y < CUBE_W as f32 { unsafe {
-                calculate_for_surface(cube_x, cube_y, -1.*CUBE_W as f32, '@');
-                calculate_for_surface(CUBE_W as f32, cube_y, cube_x, '$');
-                calculate_for_surface(-1.*CUBE_W as f32, cube_y, -1.*cube_x, '~');
-                calculate_for_surface(-1.*cube_x, cube_y, CUBE_W as f32, '#');
-                calculate_for_surface(cube_x, -1.*CUBE_W as f32, -cube_y, ';');
-                calculate_for_surface(cube_x, CUBE_W as f32, cube_y, '+'); 
-            }
-            cube_y = cube_y + INCREMENT_SPEED;
+            let mut cube_y = -1.*CUBE_W as f32;
+            while cube_y < CUBE_W as f32 {
+                calculate_for_surface(cube_x, cube_y, -1.*CUBE_W as f32, '@', &mut status);
+                calculate_for_surface(CUBE_W as f32, cube_y, cube_x, '$', &mut status);
+                calculate_for_surface(-1.*CUBE_W as f32, cube_y, -1.*cube_x, '~', &mut status);
+                calculate_for_surface(-1.*cube_x, cube_y, CUBE_W as f32, '#', &mut status);
+                calculate_for_surface(cube_x, -1.*CUBE_W as f32, -cube_y, ';', &mut status);
+                calculate_for_surface(cube_x, CUBE_W as f32, cube_y, '+', &mut status); 
+                cube_y = cube_y + INCREMENT_SPEED;
             }
             cube_x = cube_x + INCREMENT_SPEED;
         }
@@ -79,15 +87,14 @@ fn main() {
         print!("\x1b[H");  // Move cursor to the top-left of the screen
         for k in 0..SCREEN_WXH {
             if (k % SCREEN_W) != 0 {
-                unsafe {print!("{}",BUFFER[k]);}
+                print!("{}",status.buf[k]);
             } else {print!("{}", 10 as char)}
             let _ = stdout().flush();
         }
+        
+        status.a = status.a + 0.05;
+        status.b = status.b + 0.05;
+        status.c = status.c + 0.01;
 
-        unsafe {
-            A = A + 0.05;
-            B = B + 0.05;
-            C = C + 0.01;
-        }
     }
 }
